@@ -1,0 +1,187 @@
+Adventure in the Park init code:
+  $000200 weird io reading stuff
+  $000220 TMSS
+  $000236 init USP to #$00000000
+  $00023c init VDP regs $00-$17 (table at $0002b2-$0002c9)
+            reg $00/00 = $04
+            reg $01/01 = $14 ;DMA enabled
+            reg $02/02 = $30 ;BGA nametable = $c000
+            reg $03/03 = $2C ;window nametable = $b000
+            reg $04/04 = $07 ;BGB nametable = $e000
+            reg $05/05 = $54 ;SAT = $a800
+            reg $06/06 = $00
+            reg $07/07 = $00 ;background color = $00
+            reg $08/08 = $00
+            reg $09/09 = $00
+            reg $0a/10 = $00
+            reg $0b/11 = $00 ;full scroll
+            reg $0c/12 = $81 ;horizontal 40-cell mode
+            reg $0d/13 = $2B ;hscroll table = $ac00
+            reg $0e/14 = $00
+            reg $0f/15 = $01 ;auto-inc = $01
+            reg $10/16 = $01 ;64-cell wide nametables
+            reg $11/17 = $00
+            reg $12/18 = $00
+            reg $13/19 = $FF ;dma-len = $ffff
+            reg $14/20 = $FF
+            reg $15/21 = $00 ;dma fill mode
+            reg $16/22 = $00
+            reg $17/23 = $80
+  $000248 dma to VRAM $0000 ($0002ca-$0002cd)
+  $00024c Z80 busreq on, reset off
+  $000256 copy some code to Z80 ($0002ce-$0002f3)
+  $00025e Z80 reset on, busreq off
+  $000264 clear $ffff0000-$ffffffff of ram
+  $00026a set VDP regs $8104 $8f01  disable dma, auto-inc 1 ($0002f4)
+  $00026c clear $20 longs starting at CRAM $0000  ($0002f8)
+  $000276 clear $14 longs starting at VSRAM $0000 ($0002fc)
+  $000280 silence PSG  ($000300-$000303)
+  $00028a z80 reset on
+  $00028c clear regs, disable interrupts, jump to $000304
+  -------------------------------
+  $000304 read VDPCTRL?
+  $00030a zero lower word of A7
+  $00030e move #$2300,sr
+  $000312 another ram clear loop, this time from $00ff0000-$00ffffff
+  $000324 copy 8 bytes from $0df51e to $00ff0000
+  $000344 jmp to $0060a8
+  ------------------------------- this looks like the actual game code now
+                                  only noting important things now
+  $004dfc game init subroutine ?
+  $004e08 strange write? #$f.w -> $0
+    $0033f0 looks like the actual game's io init subroutine (jump to $0033f4)
+    $0033f8 call $0033ac, param #1, $ff891d and r$18 $00->$80
+              (byte at $ff891d contains reg $18 value)
+              (this routine sets or clears bit 7 depending if parameter is nonzero)
+    $0033fe init controllers
+    $003416 z80 busreq/reset again lol
+    $00343a call $003c70, upload different code to z80
+    $00343e now the game is trying to write to $bxxxxx memory region?
+              is this an unlock sequence for the cyclone features? or just more ram?
+              #7.w -> $b00012
+              #7.w -> $0
+              #1.w -> $b01036
+    $003454 init vdp regs (table at $01076b-$010783)
+              reg $00/00 = $04
+              reg $01/01 = $14
+              reg $02/02 = $30 ;BGA nametable = $c000
+              reg $03/03 = $40 ;window nametable = $10000 (assuming bit 6 is a16)
+              reg $04/04 = $07 ;BGB nametable = $e000
+              reg $05/05 = $88 ;SAT = $11000 (assuming bit 7 is a16)
+              reg $06/06 = $00
+              reg $07/07 = $00 ;background color = 0
+              reg $08/08 = $00
+              reg $09/09 = $00
+              reg $0a/10 = $01 ;h-interrupt = 1
+              reg $0b/11 = $00 ;full scroll
+              reg $0c/12 = $81 ;horizontal 40-cell mode
+              reg $0d/13 = $45 ;hscroll table = $11400 (assuming bit 6 is a16)
+              reg $0e/14 = $00
+              reg $0f/15 = $02 ;auto-inc = 2
+              reg $10/16 = $11 ;64x64 nametables
+              reg $11/17 = $00
+              reg $12/18 = $FF
+              reg $13/19 = $00 ;dma-len = 0
+              reg $14/20 = $00
+              reg $15/21 = $00 ;dma-src = 0
+              reg $16/22 = $00
+              reg $17/23 = $00
+              reg $18/24 = $82 ;mystery reg  $80->$82
+    $003498 clear $6000 longs ($18000 bytes) starting at VRAM $00000
+    $0034b6 clear $400 words ($800 bytes) starting at CRAM $000
+    $0034d4 YM init
+    $003586 #1.w -> $b01036
+    $00358e misc ram clears
+    $0035c8 exit
+    .
+    $00b9d0 lots of $bxxxxx writes
+              #2.w -> $b0001a
+              #$164.w -> $b01068
+              #4.w -> $b00012
+              #7.w -> 0
+              #1.w -> $b01036
+  
+  
+  instruction at $00ba70 indicates that $bxxxxx area is readable
+
+
+reg $18 layout:
+    bit 7 - 1: cyclone mode/ 0: megadrive mode
+    bit 6 - 1: bitmap mode
+    bit 3 - sprite palette area (0: $0000-$03ff/ 1: $0400-$07ff)
+    bit 2 - window palette area (0: $0000-$03ff/ 1: $0400-$07ff)
+    bit 1 - BGB palette area (0: $0000-$03ff/ 1: $0400-$07ff)
+    bit 0 - BGA palette area (0: $0000-$03ff/ 1: $0400-$07ff)
+
+effects of enabling cyclone mode:
+    an extra $10000 bytes of vram are enabled
+    cram now points to a different $800 byte block, used for 6bpp palettes
+    tile data is 6bpp, and tiles are $30 bytes long
+    dma lengths are measured in longs as opposed to the usual words
+    register 7 (background color) is extended
+      bits 6-7: palette
+      bits 0-5: color
+      the color is always in cram $000-$3ff
+      when switching cyclone mode on, the register keeps its _value_, it does not adjust
+        at all. plus, the value is masked with $3f in megadrive mode
+    something is different with the VRAM pointer registers, not sure about specifics
+      reg 2 (BGA pointer):
+        same as reg 4 but left-shifted thrice
+      reg 4 (BGB pointer):
+        $00 - $00000
+        $01 - $02000
+        $02 - $04000
+        $03 - $06000
+        $04 - $08000
+        $05 - $0a000
+          (^^^^ same as megadrive)
+        $06 - $12000
+        $07 - $14000
+        $08 - $16000
+        $09 - $18000
+        $0a - $1a000
+        $0b - $1c000
+        $0c - $1e000
+        $0d-$0f are probably $20000-$24000 but these vram locations are buggy
+        values are masked with $0f
+      reg 5 (SAT pointer):
+        values $00-$5f are the same as megadrive:
+          (address>>9) & $fe, from $0000-$bc00
+        values $60+ start from $12000, again masked with $fe
+      reg 13 (hscroll pointer):
+        same pattern as always
+      why all of these settings avoid $c000-$11fff is beyond me
+      these are only different if the registers are written with cyclone mode on
+      if you write an address with cyclone mode off, then turn it on, the old
+        address is kept. so, it's still possible to set an address within $c000-$ffff.
+        however, $10000-$11fff are never usable, since the "out of bounds" bits of the
+        address registers are completely ignored in megadrive mode
+
+bitmap mode:
+    enabled by bit 6 in r$18
+    bitmap cannot be scrolled
+    bitmap takes over both background and window layers
+    sprites can be displayed over the bitmap
+    starts at $4e00 in VRAM
+    colors are in YUV color space. every 2x2 block of pixels must have the same Y and U,
+      but V is customizable per-pixel
+    each long affects a 2x2 block of pixels
+      byte 0:
+        bit 7: lower-right pixel V (lower bit)
+        bits 2-6: lower-left pixel V
+        bits 0-1: upper-right pixel V (upper bits)
+      byte 1:
+        bits 5-7: upper-right pixel V (lower bits)
+        bits 0-4: upper-left pixel V
+      byte 2:
+        bits 2-7: Y
+        bits 0-1: U (upper bits)
+      byte 3:
+        bits 4-7: U (lower bits)
+        bits 0-3: lower-right pixel V (upper bits)
+      much like the tile data, this arrangement makes more sense if you swap the words
+    the bitmap data goes row by row
+    bitmap is unaffected by CRAM
+
+other stuff:
+    emulator does not support 30-row screen mode at all
