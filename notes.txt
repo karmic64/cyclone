@@ -163,22 +163,22 @@ bitmap mode:
     bitmap takes over both background and window layers
     sprites can be displayed over the bitmap
     starts at $4e00 in VRAM
-    colors are in YUV color space. every 2x2 block of pixels must have the same Y and U,
-      but V is customizable per-pixel
+    colors are in YUV color space. every 2x2 block of pixels must have the same U and V,
+      but Y is customizable per-pixel
     each long affects a 2x2 block of pixels
       byte 0:
-        bit 7: lower-right pixel V (lower bit)
-        bits 2-6: lower-left pixel V
-        bits 0-1: upper-right pixel V (upper bits)
+        bit 7: lower-right pixel Y (lower bit)
+        bits 2-6: lower-left pixel Y
+        bits 0-1: upper-right pixel Y (upper bits)
       byte 1:
-        bits 5-7: upper-right pixel V (lower bits)
-        bits 0-4: upper-left pixel V
+        bits 5-7: upper-right pixel Y (lower bits)
+        bits 0-4: upper-left pixel Y
       byte 2:
-        bits 2-7: Y
-        bits 0-1: U (upper bits)
+        bits 2-7: U
+        bits 0-1: V (upper bits)
       byte 3:
-        bits 4-7: U (lower bits)
-        bits 0-3: lower-right pixel V (upper bits)
+        bits 4-7: V (lower bits)
+        bits 0-3: lower-right pixel Y (upper bits)
       much like the tile data, this arrangement makes more sense if you swap the words
     the bitmap data goes row by row
     bitmap is unaffected by CRAM
